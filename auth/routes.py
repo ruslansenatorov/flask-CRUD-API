@@ -85,8 +85,6 @@ def authRoutes(app):
     @app.route("/edit-profile", methods = ['POST'])
     @tokenRequired
     def editProfile():
-        token = request.headers.get('Authorization')
-        print("received token:", token)
         userid = request.user
         data = request.json
         allowed_fields = ["username", "first_name", "last_name", "gender", "address"]
@@ -117,6 +115,27 @@ def authRoutes(app):
             return jsonify({
                 "error" : str(e)
             }), 500
+        finally:
+            cur.close()
+            conn.close()
+
+    @app.route("/delete-account", methods = ['POST'], endpoint= "delete_account")
+    @tokenRequired
+    def delete():
+        userid = request.user
+
+        try:
+            query = """
+                DELETE FROM users WHERE user_id = %s;
+            """
+            conn = getDBConn()
+            cur = conn.cursor()
+            cur.execute(query, (userid,))
+            conn.commit()
+            return jsonify({"message" : "Account deleted successfully!"}), 200
+
+        except Exception as e:
+            return jsonify({"error" : str(e)}), 500
         finally:
             cur.close()
             conn.close()
