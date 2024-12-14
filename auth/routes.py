@@ -37,7 +37,7 @@ def authRoutes(app):
         conn.close()
 
 
-        accesstoken, refreshtoken = generateToken(email)
+        accesstoken, refreshtoken = generateToken(userid)
 
         return jsonify({"message":"user created successfully",
                          "user_id":userid,
@@ -53,7 +53,7 @@ def authRoutes(app):
         password = data.get('password')
 
         query = '''
-                SELECT password FROM users WHERE username = %s;
+                SELECT password, user_id FROM users WHERE username = %s;
         '''
         conn = getDBConn()
         cur = conn.cursor()
@@ -76,8 +76,49 @@ def authRoutes(app):
         if not check:
             return jsonify({"message" : "Entered password is incorrect"}), 401
         
-        accesstoken, refreshtoken = generateToken(email)
+        accesstoken, refreshtoken = generateToken(user[1])
         
         return jsonify({"message" : "user logged in successfully",
                         "access_token" : accesstoken
                         }), 200
+    
+    @app.route("/edit-profile", methods = ['POST'])
+    @tokenRequired
+    def editProfile():
+        token = request.headers.get('Authorization')
+        print("received token:", token)
+        userid = request.user
+        data = request.json
+        allowed_fields = ["username", "first_name", "last_name", "gender", "address"]
+
+        updates = {key: value for key, value in data.items() if key in allowed_fields}
+
+        if not updates:
+            return jsonify({
+                "message" : "No valid fields to update"
+            }), 400
+        
+        try:
+            conn = getDBConn()
+            cur = conn.cursor()
+
+            set_clause = ", ".join([f"{key} = %s" for key in updates.keys()])
+
+            query = f"UPDATE users SET {set_clause} WHERE user_id = %s"
+            values = list(updates.values()) + [userid]
+
+            cur.execute(query, values)
+            conn.commit()
+
+            return jsonify({
+                "message" : "Profile updated successfully"
+            }), 200
+        except Exception as e:
+            return jsonify({
+                "error" : str(e)
+            }), 500
+        finally:
+            cur.close()
+            conn.close()
+
+ 

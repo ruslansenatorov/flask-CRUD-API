@@ -8,16 +8,16 @@ JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRES_MINUTES = 15
 REFRESH_TOKEN_EXPIRES_DAYS = 7
 
-def generateToken(email):
+def generateToken(userid):
     access_token_payload = {
-        "email" : email,
+        "user_id" : userid,
         "exp" : datetime.datetime.utcnow() + datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRES_MINUTES)
     }
 
     access_token = jwt.encode(access_token_payload, JWT_SECRET, algorithm= JWT_ALGORITHM)
 
     refresh_token_payload = {
-        "email" : email,
+        "user_id" : userid,
         "exp" : datetime.datetime.utcnow() + datetime.timedelta(days= REFRESH_TOKEN_EXPIRES_DAYS)
     }
 
@@ -47,13 +47,13 @@ def tokenRequired(f):
             return jsonify({"error" : "Token is missing"}), 401
         
 
-        token.split(" ")[1] if " " in token else token
+        token = token.split(" ")[1] if " " in token else token
 
         decoded = decodeToken(token)
 
         if "error" in decoded:
             return jsonify(decoded), 401
         
-        request.user = decoded['email']
+        request.user = decoded['user_id']
         return f(*args, **kwargs)
     return decorator
