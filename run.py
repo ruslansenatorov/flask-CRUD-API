@@ -1,7 +1,7 @@
 from flask import Flask
 from auth.routes import authRoutes
 from infrastructure.config import Config
-
+ 
 app = Flask(__name__)
 app.config.from_object(Config)
 
