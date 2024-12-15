@@ -140,4 +140,57 @@ def authRoutes(app):
             cur.close()
             conn.close()
 
+    @app.route("/get-users", methods = ['GET'])
+    def getUsers():
+
+
+        data = request.json
+        page_no = data.get('page_no')
+        page_size = data.get('page_size')
+
+        if not page_no:
+            page_no = 1
+        
+        offset = page_size*(page_no - 1)
+
+        try:
+            query = """
+                        SELECT user_id, username, first_name, last_name, email, gender, address FROM users ORDER BY user_id 
+                        LIMIT %s OFFSET %s;
+                    """
+            conn = getDBConn()
+            cur = conn.cursor()
+            cur.execute(query, (page_size,offset, ))
+            users = cur.fetchall()
+
+            cur.execute("SELECT COUNT(*) FROM users;")
+            total_users = cur.fetchone()[0]
+
+            column_names = ["user_id", "username", "firstname", "lastname", "email", "gender", "address"]
+
+            formatted_users = [dict(zip(column_names, user)) for user in users]
+
+            response = {
+                "users" : formatted_users,
+                "pagination": {
+                    "total_users" : total_users,
+                    "page" : page_no,
+                    "page_size" : page_size,
+                    "total_pages" : (total_users + page_size - 1)//page_size
+                }
+            }
+
+            return jsonify(response), 200
+
+
+
+        except Exception as e:
+            return jsonify({
+                "error" : str(e)
+            }), 500
+        finally:
+            conn.close()
+            cur.close()
+
+
  
